@@ -3,14 +3,14 @@
 <head>
     <script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
     <script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.min.js"></script>
-    
+
 </head>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
 <script>
     let classes = ['Anger', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
-    let model;
+
     async function f() {
-        model = await tf.loadLayersModel(
+        let model = await tf.loadLayersModel(
             'https://demo-bucket-saju.s3.amazonaws.com/js/model.json'
         ).then((m) => {
             console.log("Done ")
@@ -30,16 +30,34 @@
 
         var image = document.getElementById("my_image");
         image.src = URL.createObjectURL(event.target.files[0]);
-
-        image.onload = async function () {
-            console.log("Image Loaded.");
-            f();
-        }
-
+        console.log("Image Uploaded...");
+        document.getElementById("predict_btn").disabled=false;
+       
     }
-    console.log("Start")
-   
-    // window.onload = f();
+
+     async function predict() {
+        console.log("Predict")
+        var image = new Image();
+        console.log(image)
+        image.onload = async function () {
+            console.log("Image Loaded...")
+            let model = await tf.loadLayersModel(
+                'https://demo-bucket-saju.s3.amazonaws.com/js/model.json'
+            ).then((m) => {
+                console.log("Done ")
+                m.summary()
+                var pic = document.getElementById('my_image')
+                var input = tf.browser.fromPixels(pic, 1).expandDims(0);
+                var prediction = m.predict(input);
+                console.log("Prediction: ", prediction.dataSync());
+                console.log("Winner: ", classes[prediction.argMax().dataSync()[0]]);
+                var predicted_class = classes[prediction.argMax().dataSync()[0]];
+                var res_view = document.getElementById('result');
+                res_view.textContent = "Result: " + predicted_class;
+            });
+        }
+        image.src = document.getElementById('my_image').src;
+    }
 
 </script>
 
@@ -50,10 +68,14 @@
     <input id='inputfile' type='file' name='inputfile' onChange='getFileNameWithExt(event)'><br>
     <br><br>
 
-    <img id="my_image" src="#" alt="your image" />
+    <img id="my_image" src="#" alt="uploaded image" />
 
     <br />
-
+    <br />
+    <button id="predict_btn" onclick="predict()" disabled>Predict</button>
+    <br>
+    <br />
+    <p id="result"></p>
 
 
 </body>
