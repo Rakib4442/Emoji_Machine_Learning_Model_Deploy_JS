@@ -3,25 +3,10 @@
 <head>
     <script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
     <script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
 </head>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
 <script>
     let classes = ['Anger', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
-
-    async function f() {
-        let model = await tf.loadLayersModel(
-            'https://demo-bucket-saju.s3.amazonaws.com/js/model.json'
-        ).then((m) => {
-            console.log("Done ")
-            m.summary()
-            var pic = document.getElementById('my_image')
-            var input = tf.browser.fromPixels(pic, 1).expandDims(0);
-            var prediction = m.predict(input);
-            console.log("Prediction: ", prediction.dataSync());
-            console.log("Winner: ", classes[prediction.argMax().dataSync()[0]])
-        });
-    }
 
     async function getFileNameWithExt(event) {
         if (!event || !event.target || !event.target.files || event.target.files.length === 0) {
@@ -29,31 +14,57 @@
         }
 
         var image = document.getElementById("my_image");
+
         image.src = URL.createObjectURL(event.target.files[0]);
         console.log("Image Uploaded...");
-        document.getElementById("predict_btn").disabled=false;
-       
+        document.getElementById("predict_btn").disabled = false;
     }
 
-     async function predict() {
-        console.log("Predict")
+    function indexOfMax(arr) {
+        if (arr.length === 0) {
+            return -1;
+        }
+
+        var max = arr[0];
+        var maxIndex = 0;
+
+        for (var i = 1; i < arr.length; i++) {
+            if (arr[i] > max) {
+                maxIndex = i;
+                max = arr[i];
+            }
+        }
+
+        return maxIndex;
+    }
+
+    async function predict() {
+        var res_view = document.getElementById('result');
+        res_view.textContent = ""
         var image = new Image();
-        console.log(image)
         image.onload = async function () {
             console.log("Image Loaded...")
+
+            var canvas = document.createElement("canvas");
+            var ctx = canvas.getContext('2d');
+            canvas.width = 48;
+            canvas.height = 48;
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
             let model = await tf.loadLayersModel(
                 'https://demo-bucket-saju.s3.amazonaws.com/js/model.json'
             ).then((m) => {
                 console.log("Done ")
-                m.summary()
                 var pic = document.getElementById('my_image')
-                var input = tf.browser.fromPixels(pic, 1).expandDims(0);
+                var input = tf.browser.fromPixels(canvas, 1).expandDims(0);
                 var prediction = m.predict(input);
-                console.log("Prediction: ", prediction.dataSync());
-                console.log("Winner: ", classes[prediction.argMax().dataSync()[0]]);
-                var predicted_class = classes[prediction.argMax().dataSync()[0]];
-                var res_view = document.getElementById('result');
+                var arr = prediction.dataSync();
+                var id = indexOfMax(arr);
+                console.log("Predicted Array: ", arr);
+                console.log("Predicted class id: ", id);
+                var predicted_class = classes[indexOfMax(prediction.dataSync())];
                 res_view.textContent = "Result: " + predicted_class;
+                return;
             });
         }
         image.src = document.getElementById('my_image').src;
@@ -61,21 +72,23 @@
 
 </script>
 
-
 <body>
-    <p>Click on the "Choose File" button to upload a file:</p>
 
-    <input id='inputfile' type='file' name='inputfile' onChange='getFileNameWithExt(event)'><br>
-    <br><br>
+    <div style="font-size:18px; text-align: center; margin-top: 150px;">
+        <p>Click on the "Choose File" button to upload a image file:</p>
 
-    <img id="my_image" src="#" alt="uploaded image" />
+        <input id='inputfile' type='file' name='inputfile' onChange='getFileNameWithExt(event)'><br>
+        <br><br>
 
-    <br />
-    <br />
-    <button id="predict_btn" onclick="predict()" disabled>Predict</button>
-    <br>
-    <br />
-    <p id="result"></p>
+        <img id="my_image" src="#" alt="uploaded image" width="300" height="300"/>
+
+        <br />
+        <br />
+        <button id="predict_btn" onclick="predict()" disabled>Predict</button>
+        <br>
+        <br />
+        <p id="result"></p>
+    </div>
 
 
 </body>
